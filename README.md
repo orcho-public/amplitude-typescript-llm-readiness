@@ -1,4 +1,4 @@
-# Amplitude TypeScript — LLM Readiness Analysis
+# Amplitude TypeScript - LLM Readiness Analysis
 
 This repository contains a **snapshot-based analysis** of the Amplitude TypeScript SDK focused on **API contract clarity and LLM-assisted development readiness**.
 
