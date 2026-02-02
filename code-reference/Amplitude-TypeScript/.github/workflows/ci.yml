@@ -1,0 +1,63 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches:
+      - main
+      - v1.x
+
+jobs:
+  build:
+    name: Build
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20.x, 22.x, 24.x]
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Check out git repository
+        uses: actions/checkout@v3
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+
+      - name: Install project dependencies
+        run: |
+          pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        run: |
+          pnpm build
+
+      # https://github.com/amplitude/Amplitude-TypeScript/issues/281
+      - name: Check module dependencies
+        run: |
+          if grep -rnw 'packages/analytics-core/lib' -e '/// <reference types="node" />'; then
+            exit 1
+          elif grep -rnw 'packages/analytics-browser/lib' -e '/// <reference types="node" />'; then
+            exit 1
+          elif grep -rnw 'packages/analytics-marketing-analytics-browser/lib' -e '/// <reference types="node" />'; then
+            exit 1
+          elif grep -rnw 'packages/analytics-react-native/lib' -e '/// <reference types="node" />'; then
+            exit 1
+          fi
+
+      - name: Build docs
+        run: |
+          pnpm docs:check
+
+      - name: Test all packages
+        run: |
+          pnpm test
+
+      - name: Lint all packages
+        run: |
+          pnpm lint
