@@ -61,7 +61,4 @@ All findings:
 
 No interpretation or tooling is required.
 
----
-
-## Repository structure
 
