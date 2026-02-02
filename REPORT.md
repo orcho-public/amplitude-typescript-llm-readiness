@@ -1,4 +1,4 @@
-# Documentation–Implementation Mismatches and LLM API Hallucination Risk
+# Documentation–Implementation Mismatches and LLM / AI Risk
 
 **Repository analyzed:** `Amplitude-TypeScript`  
 **Commit:** `6ff4832a88f61126d9c0edb25bef5a2378e88356` (short: `6ff4832`)  
@@ -13,18 +13,18 @@
 - **13 public-facing APIs** were reviewed against the specified commit.
 - **7 findings are fully verified, high-confidence contradictions** where comments or JSDoc clearly misstate runtime behavior.
 - **6 additional findings identify ambiguous API contracts**, where documentation is incomplete or underspecified but not strictly false.
-- The dominant issue is **API hallucination risk**:
-  - callers infer return values, sync/async behavior, or nullability that the code does not guarantee.
-- These issues do not indicate broken functionality, but they **increase the likelihood of plausible-but-wrong code**, especially in LLM-assisted workflows.
+- The dominant issue is **LLM and AI risk**:
+  - callers (human or AI) infer return values, sync/async behavior, or nullability that the code does not guarantee.
+- These issues do not indicate broken functionality, but they **increase the likelihood of plausible-but-wrong code** in AI-assisted development workflows.
 
 ---
 
-## What “API hallucination” means in this context
+## How LLM and AI risk arises
 
-API hallucination occurs when:
+LLM and AI risk emerges when:
 - documentation asserts a contract the runtime does not implement, or
 - documentation omits critical constraints (e.g. `undefined`, async behavior),
-- forcing callers to *invent* behavior that “seems reasonable.”
+- forcing callers to *invent* behavior that appears reasonable.
 
 In AI-assisted coding:
 - comments are weighted more heavily than implementation,
@@ -33,147 +33,96 @@ In AI-assisted coding:
 
 ---
 
-## Fully verified contradictions (high hallucination risk)
+## Fully verified contradictions (high LLM / AI risk)
 
 These findings are clear doc–code mismatches. The documented behavior is **false** relative to runtime behavior in the analyzed commit.
 
 ### 1. `translateRemoteConfigToLocal`
-
-- **Location:** `packages/analytics-browser/src/config/joined-config.ts`
-- **Documented contract:** Returns a transformed config object.
-- **Runtime behavior:** Returns `void`; performs side effects only.
-- **Hallucination risk:** Callers attempt to capture or chain a nonexistent return value.
-
----
+- **Documented:** Returns a transformed config object.
+- **Runtime:** Returns `void`; side effects only.
+- **Risk:** Nonexistent return values are assumed and chained.
 
 ### 2. `AmplitudeBrowser.init`
-
-- **Location:** `packages/analytics-browser/src/browser-client.ts`
-- **Documented contract:** Returns `void`.
-- **Runtime behavior:** Returns an `AmplitudeReturn<T>` (thenable with `.promise`).
-- **Hallucination risk:** Missing `await`, race conditions during initialization.
-
----
+- **Documented:** Synchronous, returns `void`.
+- **Runtime:** Returns an `AmplitudeReturn<T>` (thenable).
+- **Risk:** Missing `await`, initialization race conditions.
 
 ### 3. `RemoteConfigClient.updateConfigs`
-
-- **Location:** `packages/analytics-core/src/remote-config/remote-config.ts`
-- **Documented contract:** Returns `void`.
-- **Runtime behavior:** `async` function returning `Promise<void>`.
-- **Hallucination risk:** Fire-and-forget usage where sequencing matters.
-
----
+- **Documented:** Returns `void`.
+- **Runtime:** `async`, returns `Promise<void>`.
+- **Risk:** Fire-and-forget usage where sequencing matters.
 
 ### 4. `parseHeaderCaptureRule`
-
-- **Location:** `packages/plugin-network-capture-browser/src/track-network-event.ts`
-- **Documented contract:** Returns a `HeaderCaptureRule` object.
-- **Runtime behavior:** Returns `string[] | undefined`.
-- **Hallucination risk:** Property access on non-object values.
-
----
+- **Documented:** Returns a `HeaderCaptureRule` object.
+- **Runtime:** Returns `string[] | undefined`.
+- **Risk:** Property access on non-object values.
 
 ### 5. `updateBrowserConfigWithRemoteConfig`
-
-- **Location:** `packages/analytics-browser/src/config/joined-config.ts`
-- **Documented contract:** Implies a returned updated config.
-- **Runtime behavior:** Returns `void`; mutates input object.
-- **Hallucination risk:** Incorrect chaining and silent misconfiguration.
-
----
+- **Documented:** Implies returned updated config.
+- **Runtime:** Returns `void`; mutates in place.
+- **Risk:** Incorrect chaining and silent misconfiguration.
 
 ### 6. `parseCdnUrl`
-
-- **Location:** `test-server/mock-api.js`
-- **Documented contract:** Always returns a parsed object.
-- **Runtime behavior:** Returns `null` when input does not match.
-- **Hallucination risk:** Missing null checks leading to crashes in tests or mocks.
-
----
+- **Documented:** Always returns an object.
+- **Runtime:** May return `null`.
+- **Risk:** Missing null checks and runtime crashes.
 
 ### 7. `resolveSourcePath`
-
-- **Location:** `test-server/mock-api.js`
-- **Documented contract:** Returns a `string`.
-- **Runtime behavior:** Returns a structured object.
-- **Hallucination risk:** String operations applied to objects.
+- **Documented:** Returns a `string`.
+- **Runtime:** Returns a structured object.
+- **Risk:** String operations applied to objects.
 
 ---
 
-## Ambiguous API contracts (moderate hallucination risk)
+## Ambiguous API contracts (moderate LLM / AI risk)
 
-These findings are not outright false documentation, but **leave critical aspects of the API contract implicit**.
+These findings do not represent outright false documentation, but **leave key aspects of the API contract implicit**.
 
 ### 8. `asyncMap`
-
 - **Reality:** Returns `ZenObservable<R>`.
-- **Ambiguity:** Observable/streaming semantics are not emphasized.
-- **Hallucination risk:** Promise-like usage inferred.
-
----
+- **Risk:** Promise-like usage inferred.
 
 ### 9. `uploadFile`
-
-- **Reality:** `async` function returning `Promise<void>`.
-- **Ambiguity:** No documented return semantics.
-- **Hallucination risk:** Invented boolean success/failure logic.
-
----
+- **Reality:** `async`, returns `Promise<void>`.
+- **Risk:** Invented success/failure return semantics.
 
 ### 10. `getEventsArraySize`
-
 - **Reality:** Returns size plus serialization overhead.
-- **Ambiguity:** Exact return semantics not fully specified.
-- **Hallucination risk:** Incorrect size thresholds and buffering logic.
-
----
+- **Risk:** Incorrect size thresholds or buffering logic.
 
 ### 11. `RequestWrapperFetch.headers`
-
 - **Reality:** Returns `Record<string, string> | undefined`.
-- **Ambiguity:** `undefined` not clearly documented.
-- **Hallucination risk:** Assumption that headers are always present.
-
----
+- **Risk:** Assumption that headers are always present.
 
 ### 12. `nativeConfig`
-
-- **Reality:** Synchronous function returning a config object.
-- **Ambiguity:** No JSDoc defining the contract.
-- **Hallucination risk:** Async usage inferred from surrounding patterns.
-
----
+- **Reality:** Synchronous config object.
+- **Risk:** Async usage inferred without documentation.
 
 ### 13. `ResponseWrapperFetch.headers`
-
 - **Reality:** Returns `Record<string, string> | undefined`.
-- **Ambiguity:** Documentation vague about shape and nullability.
-- **Hallucination risk:** Overconfident destructuring and silent failures.
+- **Risk:** Overconfident destructuring and silent failures.
 
 ---
 
 ## Why this matters
 
-- **Hallucinated API contracts are costly**:
-  - they compile,
-  - they look correct,
-  - they fail late and inconsistently.
-- **LLMs amplify documentation drift**:
-  - comments outweigh implementation,
-  - ambiguity forces guesswork,
-  - guesswork increases retries and correction loops.
-- **Reducing ambiguity lowers cost and risk**:
+- **Incorrect assumptions scale poorly** in AI-assisted development.
+- **LLMs amplify documentation ambiguity**:
+  - comments outweigh code,
+  - ambiguity increases hallucination,
+  - hallucination increases correction cycles.
+- **Clear contracts reduce risk and cost**:
   - fewer runtime errors,
-  - fewer corrective iterations,
-  - lower token usage in AI-assisted workflows.
+  - fewer retries,
+  - lower cognitive and token overhead.
 
-Improving documentation accuracy directly reduces **API hallucination surface area**.
+Improving documentation accuracy directly reduces **LLM and AI risk**.
 
 ---
 
 ## Research attribution
 
-This analysis aligns with prior research on hallucination and ambiguity in LLM-assisted code generation:
+This analysis is consistent with prior work on hallucination and ambiguity in AI-assisted code generation:
 
 - Ji et al., 2023 — *A Survey of Hallucination in Large Language Models*  
   https://arxiv.org/abs/2311.05232
