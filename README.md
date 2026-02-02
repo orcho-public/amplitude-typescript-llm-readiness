@@ -24,7 +24,7 @@ The upstream code is **not modified**.
 - Documentation vs runtime behavior
 - Return types, async vs sync semantics, and nullability
 - Developer experience and tooling implications
-- LLM API hallucination risk caused by ambiguous or contradictory contracts
+- AI hallucination risk caused by ambiguous or contradictory contracts
 
 ### Explicitly out of scope
 - Functional correctness
